@@ -7,6 +7,7 @@
 ## Authors
 
 - [@Sh3lbyx](https://www.github.com/proger-exe)
+- [@mr.user](https://www.github.com/mrruserr)
 
 
 ## Used By
