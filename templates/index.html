@@ -1,0 +1,552 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>DocFlow Content Analyzer</title>
+        <style>
+            :root {
+                --primary: #4361ee;
+                --secondary: #3f37c9;
+                --accent: #4cc9f0;
+                --background: #f8f9fa;
+                --text: #2b2d42;
+                --success: #06d6a0;
+                --warning: #ffd166;
+                --error: #ef476f;
+                --font-base: 'Segoe UI', system-ui, sans-serif;
+                --font-size-base: 1rem;
+            }
+        
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+        
+            body {
+                font-family: var(--font-base);
+                background: var(--background);
+                color: var(--text);
+                line-height: 1.6;
+            }
+        
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+        
+            /* Header */
+            .header {
+                text-align: center;
+                padding: 2rem 0;
+                background: linear-gradient(135deg, var(--primary), var(--secondary));
+                color: white;
+                margin-bottom: 2rem;
+                border-radius: 0 0 20px 20px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+        
+            .header h1 {
+                font-size: 2.5rem;
+                letter-spacing: -0.5px;
+                margin-bottom: 0.5rem;
+            }
+        
+            .header p {
+                font-size: 1.1rem;
+                color: rgba(255, 255, 255, 0.8);
+            }
+        
+            /* Upload Section */
+            .upload-container {
+                /* display: grid; */
+                gap: 2rem;
+                margin-bottom: 3rem;
+            }
+        
+            @media (max-width: 768px) {
+                .upload-container {
+                    grid-template-columns: 1fr;
+                }
+            }
+        
+            .drag-drop-area {
+                background: white;
+                border: 3px dashed var(--primary);
+                border-radius: 15px;
+                padding: 3rem 2rem;
+                text-align: center;
+                transition: all 0.3s ease;
+                cursor: pointer;
+                position: relative;
+                overflow: hidden;
+            }
+        
+            .drag-drop-area:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 25px rgba(67, 97, 238, 0.15);
+            }
+        
+            .drag-drop-area::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: linear-gradient(45deg,
+                    transparent 25%,
+                    rgba(67, 97, 238, 0.1) 25%,
+                    rgba(67, 97, 238, 0.1) 50%,
+                    transparent 50%,
+                    transparent 75%,
+                    rgba(67, 97, 238, 0.1) 75%
+                );
+                background-size: 3px 3px;
+                opacity: 0.3;
+                animation: moveStripes 20s linear infinite;
+            }
+        
+            @keyframes moveStripes {
+                0% { transform: rotate(0deg) translate(0, 0); }
+                100% { transform: rotate(360deg) translate(-30px, 30px); }
+            }
+        
+            /* Results Section */
+            .results-grid {
+                display: grid;
+                grid-template-columns: 300px 1fr;
+                gap: 2rem;
+                background: white;
+                border-radius: 15px;
+                box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+                padding: 2rem;
+                margin-bottom: 2rem;
+            }
+        
+            @media (max-width: 1024px) {
+                .results-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        
+            /* Chapters List */
+            .chapters-list {
+                list-style: none;
+                border-right: 2px solid var(--background);
+                padding-right: 2rem;
+            }
+        
+            .chapter-item {
+                padding: 1rem;
+                margin-bottom: 0.5rem;
+                border-radius: 8px;
+                background: rgba(67, 97, 238, 0.05);
+                transition: all 0.2s ease;
+                cursor: pointer;
+                position: relative;
+            }
+        
+            .chapter-item:hover {
+                background: rgba(67, 97, 238, 0.1);
+                transform: translateX(5px);
+            }
+        
+            .chapter-item.active {
+                background: var(--primary);
+                color: white;
+                font-weight: 500;
+            }
+        
+            /* Document Viewer */
+            .document-viewer {
+                background: white;
+                border-radius: 15px;
+                padding: 2rem;
+                box-shadow: 0 5px 25px rgba(0, 0, 0, 0.05);
+            }
+        
+            .document-content {
+                max-height: 60vh;
+                overflow-y: auto;
+                padding: 1rem;
+                background: linear-gradient(white 30%, rgba(255, 255, 255, 0)),
+                            linear-gradient(rgba(255, 255, 255, 0), white 70%) 0 100%,
+                            radial-gradient(at top, rgba(0, 0, 0, 0.1), transparent 70%),
+                            radial-gradient(at bottom, rgba(0, 0, 0, 0.1), transparent 70%);
+                background-attachment: local, local, scroll, scroll;
+            }
+        
+            /* Tags */
+            .tags-container {
+                display: flex;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+                margin: 1rem 0;
+            }
+        
+            .tag {
+                background: rgba(67, 97, 238, 0.1);
+                color: var(--primary);
+                padding: 0.4rem 0.8rem;
+                border-radius: 20px;
+                font-size: 0.9em;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+        
+            .tag::before {
+                content: '🔖';
+                font-size: 0.8em;
+            }
+        
+            /* Progress Bar */
+            .progress-bar {
+                height: 4px;
+                background: rgba(67, 97, 238, 0.1);
+                border-radius: 2px;
+                margin-top: 1rem;
+                overflow: hidden;
+            }
+        
+            .progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, var(--primary), var(--accent));
+                width: 0%;
+                transition: width 0.4s ease;
+            }
+        
+            /* Search */
+            .search-box {
+                position: relative;
+                margin-bottom: 2rem;
+            }
+        
+            .search-input {
+                width: 100%;
+                padding: 1rem 2rem;
+                border: 2px solid var(--primary);
+                border-radius: 50px;
+                font-size: 1.1rem;
+                background: white;
+                transition: all 0.3s ease;
+            }
+        
+            .search-input:focus {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.3);
+            }
+        
+            /* Responsive Design */
+            @media (max-width: 480px) {
+                .container {
+                    padding: 10px;
+                }
+        
+                .header h1 {
+                    font-size: 1.8rem;
+                }
+        
+                .document-content {
+                    padding: 0.5rem;
+                }
+        
+                .drag-drop-area {
+                    padding: 2rem 1rem;
+                }
+        
+                .search-input {
+                    padding: 0.8rem 1.5rem;
+                    font-size: 1rem;
+                }
+        
+                .processing-card {
+                    width: 90%;
+                    padding: 1.5rem;
+                }
+                .upload-container {
+                    font-size: 27px;
+                }
+            }
+        
+            /* Animations */
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        
+            .animate-fadein {
+                animation: fadeIn 0.6s ease forwards;
+            }
+        
+            .processing-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            }
+        
+            .processing-card {
+                background: white;
+                padding: 2rem;
+                border-radius: 16px;
+                text-align: center;
+                width: 400px;
+                max-width: 100%;
+            }
+        
+            .progress-container {
+                height: 8px;
+                background: #eee;
+                border-radius: 4px;
+                overflow: hidden;
+                margin: 1rem 0;
+            }
+        
+            .progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #4361ee, #4cc9f0);
+                width: 0%;
+                transition: width 0.3s ease;
+            }
+        </style>
+            </head>
+    <body>
+    <div class="header">
+        <h1>📄 DocFlow Content Analyzer</h1>
+        <p>Интеллектуальный анализ PDF-документов</p>
+    </div>
+
+    <div class="container">
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="🔍 Поиск по документам..." id="searchInput">
+        </div>
+
+        <div class="upload-container">
+            <div class="drag-drop-area" id="dropZone">
+                <div style="position: relative; z-index: 2;">
+                    <p style="font-size: 2em;">📤</p>
+                    <h3>Перетащите PDF-файл</h3>
+                    <p>или нажмите для выбора</p>
+                    <input type="file" id="fileInput" accept=".pdf" onclick="event.preventDefault();" />
+                </div>
+            </div>
+
+            <div id="analysisResult" class="animate-fadein" style="display: none;">
+                <div class="tags-container" id="tagsContainer"></div>
+                <h3 style="color: var(--primary); margin-bottom: 1rem;">Структура документа</h3>
+                <div class="results-grid">
+                    <div>
+                        <ul class="chapters-list" id="chaptersList"></ul>
+                    </div>
+                    <div class="document-viewer">
+                        <div class="document-content" id="documentContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="processing-overlay" id="processingOverlay">
+        <div class="processing-card">
+            <h3>Обработка документа</h3>
+            <div class="progress-container">
+                <div class="progress-fill" id="globalProgress"></div>
+            </div>
+            <p id="progressText">0%</p>
+            <button onclick="cancelProcessing()" class="custom-upload-btn" style="margin-top: 1rem;">Отменить</button>
+        </div>
+    </div>
+
+    <script>
+        let currentTaskId = null;
+        let checkInterval = null;
+
+        // Обработчики событий
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        document.getElementById('dropZone').addEventListener('dragover', handleDragOver);
+        document.getElementById('dropZone').addEventListener('drop', handleFileDrop);
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            e.preventDefault(); // <--- ДОБАВЬ ЭТО
+            const file = e.target.files[0];
+            if (file) startProcessing(file);
+        });
+
+        async function handleFileSelect(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const file = e.target.files[0];
+            if (file) await startProcessing(file);
+        }
+
+        async function handleFileDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const file = e.dataTransfer.files[0];
+            if (file) await startProcessing(file);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+        }
+
+        async function startProcessing(file) {
+            try {
+                showProcessing(true);
+                
+                // 1. Загрузка файла
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadResponse = await fetch('api/upload_pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadResponse.ok) throw new Error('Ошибка загрузки файла');
+                
+                const { filename } = await uploadResponse.json();
+                
+                // 2. Запуск анализа
+                const analysisResponse = await fetch(`api/analyze_pdf?name=${filename}`);
+                if (!analysisResponse.ok) throw new Error('Ошибка запуска анализа');
+                
+                const responseData = await analysisResponse.json();
+                currentTaskId = responseData.task_id;
+                console.log('Запускается startStatusChecking с taskId:', currentTaskId);
+
+                startStatusChecking();
+                
+            } catch (error) {
+                showError(error.message);
+                showProcessing(false);
+            }
+        }
+
+        function startStatusChecking() {
+            if (!currentTaskId) {
+                showError('Идентификатор задачи не определён.');
+                showProcessing(false);
+                return;
+            }
+
+            console.log('⏳ Старт проверки статуса, task_id:', currentTaskId);
+
+            checkInterval = setInterval(async () => {
+                console.log('[⏱️ interval] Тик');
+
+                try {
+                    const url = `api/check_status?task_id=${currentTaskId}`;
+                    console.log('[fetch] Пытаюсь запросить:', url);
+
+                    const response = await fetch(url);
+                    console.log('[fetch] Ответ получен:', response);
+
+                    if (!response.ok) throw new Error('Ошибка проверки статуса');
+
+                    const status = await response.json();
+                    console.log('[fetch] Получен JSON:', status);
+
+                    if (status.status === 'completed') {
+                        console.log('[✔] Обработка завершена');
+                        clearInterval(checkInterval);
+                        showProcessing(false);
+                        showResults(status.result);
+                    } else if (status.status === 'error') {
+                        console.log('[❌] Сервер вернул ошибку');
+                        clearInterval(checkInterval);
+                        throw new Error(status.error || 'Ошибка выполнения анализа');
+                    } else {
+                        console.log('[...] Прогресс:', status.progress);
+                        updateProgress(status.progress);
+                    }
+
+                } catch (error) {
+                    console.error('[‼] Ошибка в interval:', error);
+                    clearInterval(checkInterval);
+                    showProcessing(false);
+                    showError(error.message);
+                }
+
+            }, 2000);
+        }
+        
+        function updateProgress(progress) {
+            const progressBar = document.getElementById('globalProgress');
+            const progressText = document.getElementById('progressText');
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${progress}%`;
+        }
+
+        function showResults(data) {
+            document.getElementById('analysisResult').style.display = 'block';
+            document.getElementById("dropZone").style.display = 'none';
+            document.getElementById("dropZone").style.visibility = 'hidden';
+            // Обновление тегов
+            const tagsContainer = document.getElementById('tagsContainer');
+            tagsContainer.innerHTML = data.tags.map(tag => `
+                <div class="tag">${tag}</div>
+            `).join('');
+
+            // Обновление глав
+            const chaptersList = document.getElementById('chaptersList');
+            chaptersList.innerHTML = data.chapters.map((chapter, index) => `
+                <li class="chapter-item" onclick="loadChapter(${index})">
+                    ${chapter}
+                </li>
+            `).join('');
+
+            // Загрузка первой главы
+            if(data.chapters.length > 0) {
+                loadChapter(0);
+            }
+        }
+
+        async function loadChapter(index) {
+            try {
+                const response = await fetch(`api/get_chapter?task_id=${currentTaskId}&chapter=${index}`);
+                if (!response.ok) throw new Error('Ошибка загрузки главы');
+                
+                const content = await response.text();
+                document.getElementById('documentContent').innerHTML = content;
+                
+                // Подсветка активной главы
+                document.querySelectorAll('.chapter-item').forEach(item => 
+                    item.classList.remove('active'));
+                document.querySelectorAll('.chapter-item')[index].classList.add('active');
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function showProcessing(show) {
+            document.getElementById('processingOverlay').style.display = 
+                show ? 'flex' : 'none';
+        }
+
+        function cancelProcessing() {
+            clearInterval(checkInterval);
+            showProcessing(false);
+            fetch(`api/cancel_processing?task_id=${currentTaskId}`);
+            showError('Обработка отменена');
+        }
+
+        function showError(message) {
+            // Реализация отображения ошибок
+            console.error(message);
+            alert(message);
+        }
+    </script>    
+    </body>
+</html>

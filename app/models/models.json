@@ -1,0 +1,8 @@
+[
+    {
+        "Name": "CORE",
+        "FromFile": true,
+        "Priority": 0,
+        "SystemInstruction": "app/models/analyze.md"
+    }
+]

@@ -1,0 +1,2 @@
+class MakingExecutableFunctionException(Exception):
+    pass
